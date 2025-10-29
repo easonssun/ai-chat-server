@@ -1,0 +1,62 @@
+# 虚拟环境目录
+ai-chat-server/
+
+# Python缓存文件
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 环境变量文件
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 日志文件
+*.log
+logs/
+
+# 编辑器目录和文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+
+# 测试覆盖率报告
+.coverage
+coverage/
+htmlcov/
+
+# 构建输出
+build/
+dist/
+*.egg-info/
+
+# 数据库文件
+*.sqlite3
+*.db
+
+# 包管理
+poetry.lock
+Pipfile.lock
+
+# 临时文件
+tmp/
+temp/
+
+# 导出数据
+export/
+
+# 本地设置
+local_settings.py
+
+# 大文件
+*.zip
+*.tar.gz
+*.rar
