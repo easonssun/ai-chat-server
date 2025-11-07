@@ -23,13 +23,15 @@ app.add_middleware(
 class ChatRequest(BaseModel):
     input: str
 
+
+# 创建队列用于存储令牌
+queue = asyncio.Queue()
+
 async def generate_response(input_text: str) -> AsyncGenerator[str, None]:
     """
     生成流式响应
     """
     try:
-        # 创建队列用于存储令牌
-        queue = asyncio.Queue()
         
         # 定义回调函数 必须继承 BaseCallbackHandler 类否则会报错
         class StreamCallback(BaseCallbackHandler):

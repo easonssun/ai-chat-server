@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  # PostgreSQL数据库
+  mongodb:
+    image: mongo:7.0 # 可根据需要替换为其他版本，如 6.0、5.0 等
+    container_name: ai-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+    ports:
+      - "27017:27017"
+    volumes:
+      - ${HOME}/data/mongo-data:/data/db
+      # 可选：挂载自定义配置文件
+      # - ./mongod.conf:/etc/mongod.conf
+    command: [ --bind_ip_all ] # 允许外部连接（默认只监听 localhost）
+  # docker-compose 只用来启动 mongodb 快速配置开发环境，不用来启动Backend和Frontend
+
+  # Backend服务
+  # backend:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #   container_name: ai-assistant-backend
+  #   environment:
+  #     - DATABASE_URL=postgresql://ai_user:ai_password@postgres:5432/ai_assistant
+  #     - MILVUS_HOST=milvus
+  #     - MILVUS_PORT=19530
+  #   ports:
+  #     - "8010:8010"
+  #   volumes:
+  #     - ./backend:/app
+  #   networks:
+  #     - ai-network
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     milvus:
+  #       condition: service_healthy
+  #   healthcheck:
+  #     test: [ "CMD", "curl", "-f", "http://localhost:8010/docs" ]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+
+  # # Frontend服务
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: ai-assistant-frontend
+  #   environment:
+  #     - NEXT_PUBLIC_API_URL=http://localhost:8010
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - ./frontend:/app
+  #     - /app/node_modules
+  #   networks:
+  #     - ai-network
+  #   depends_on:
+  #     - backend
+  #   healthcheck:
+  #     test: [ "CMD", "curl", "-f", "http://localhost:3000" ]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+
+  # 网络配置
+networks:
+  ai-network:
+    driver: bridge
+
+# 数据卷配置
+volumes:
+  postgres_data:
+  milvus_data:
+  etcd_data:
+  minio_data:
