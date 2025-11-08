@@ -1,8 +1,9 @@
 # LangChain 相关导入
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.chat_history import InMemoryChatMessageHistory
 from langchain_core.runnables import RunnableWithMessageHistory
+
+from llm.chat_history import MongoDBChatMessageHistory
 
 # 环境变量处理
 import os
@@ -36,22 +37,31 @@ system_prompt = """
 """
 
 # 创建提示模板
-prompt = ChatPromptTemplate.from_messages([
-    ("system", system_prompt),
-    MessagesPlaceholder(variable_name="history"),
-    ("human", "{question}"),
-])
+prompt = ChatPromptTemplate.from_messages(
+    [
+        ("system", system_prompt),
+        MessagesPlaceholder(variable_name="history"),
+        ("human", "{question}"),
+    ]
+)
 
 # 创建处理链
 chain = prompt | model
 
-# 创建内存存储（实际项目中应替换为 Redis/DB）
-store = {}
 
+# 创建内存存储（实际项目中应替换为 Redis/DB）
+# 替换原来的 store = {}
 def get_chat_history(session_id: str):
-    if session_id not in store:
-        store[session_id] = InMemoryChatMessageHistory()
-    return store[session_id]
+    chat_message_history = MongoDBChatMessageHistory(
+        session_id=session_id,
+        connection_string=os.getenv(
+            "MONGODB_URI", "mongodb://localhost:27017/"
+        ),  # 替换为你的连接字符串
+        database_name=os.getenv("MONGODB_DB_NAME", "ai_chat_db"),  # 替换为你的数据库名
+        collection_name="chat_histories",  # 替换为你的集合名
+    )
+    return chat_message_history
+
 
 # 包装 chain 以支持消息历史
 chain_with_history = RunnableWithMessageHistory(
