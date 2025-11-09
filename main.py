@@ -6,7 +6,8 @@ import json
 import asyncio
 from typing import AsyncGenerator
 from langchain_core.callbacks import BaseCallbackHandler
-from llm.model import chain_with_history, SESSION_ID
+from llm.model import chain_with_history
+import uuid
 
 app = FastAPI(title="AI Chat Box API", description="基于DeepSeek的聊天API")
 
@@ -23,13 +24,16 @@ app.add_middleware(
 # 定义请求模型
 class ChatRequest(BaseModel):
     input: str
+    sessionId: str
 
 
 # 创建队列用于存储令牌
 queue = asyncio.Queue()
 
 
-async def generate_response(input_text: str) -> AsyncGenerator[str, None]:
+async def generate_response(
+    input_text: str, session_id: str
+) -> AsyncGenerator[str, None]:
     """
     生成流式响应
     """
@@ -58,7 +62,7 @@ async def generate_response(input_text: str) -> AsyncGenerator[str, None]:
                     {"question": input_text},
                     config={
                         "callbacks": [callback],
-                        "configurable": {"session_id": SESSION_ID},
+                        "configurable": {"session_id": session_id},
                     },
                 )
             except Exception as e:
@@ -88,10 +92,18 @@ async def chat(request: ChatRequest):
     聊天端点，支持流式传输
     """
     return StreamingResponse(
-        generate_response(request.input),
+        generate_response(request.input, request.sessionId),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
         },
     )
+
+
+@app.get("/api/session_id")
+async def get_session_id():
+    """
+    获取当前会话ID
+    """
+    return {"session_id": uuid.uuid4(), "success": True, "message": None}
