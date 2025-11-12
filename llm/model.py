@@ -54,9 +54,7 @@ chain = prompt | model
 def get_chat_history(session_id: str):
     chat_message_history = MongoDBChatMessageHistory(
         session_id=session_id,
-        connection_string=os.getenv(
-            "MONGODB_URI", "mongodb://localhost:27017/"
-        ),  # 替换为你的连接字符串
+        connection_string=os.getenv("MONGODB_URI"),  # 替换为你的连接字符串
         database_name=os.getenv("MONGODB_DB_NAME", "ai_chat_db"),  # 替换为你的数据库名
         collection_name="chat_histories",  # 替换为你的集合名
     )

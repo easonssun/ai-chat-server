@@ -1,81 +1,80 @@
-version: '3.8'
+version: '3.5'
 
 services:
-  # PostgreSQL数据库
   mongodb:
     image: mongo:7.0 # 可根据需要替换为其他版本，如 6.0、5.0 等
     container_name: ai-mongodb
     restart: unless-stopped
     # environment:
-      # MONGO_INITDB_ROOT_USERNAME: admin
-      # MONGO_INITDB_ROOT_PASSWORD: password123
+    # MONGO_INITDB_ROOT_USERNAME: admin
+    # MONGO_INITDB_ROOT_PASSWORD: password123
     ports:
       - "27017:27017"
     volumes:
-      - ${HOME}/data/mongo-data:/data/db
+      - ${HOME}/volumes/mongo-data:/data/db
       # 可选：挂载自定义配置文件
       # - ./mongod.conf:/etc/mongod.conf
     command: [ --bind_ip_all ] # 允许外部连接（默认只监听 localhost）
-  # docker-compose 只用来启动 mongodb 快速配置开发环境，不用来启动Backend和Frontend
+  etcd:
+    container_name: milvus-etcd
+    image: quay.io/coreos/etcd:v3.5.18
+    environment:
+      - ETCD_AUTO_COMPACTION_MODE=revision
+      - ETCD_AUTO_COMPACTION_RETENTION=1000
+      - ETCD_QUOTA_BACKEND_BYTES=4294967296
+      - ETCD_SNAPSHOT_COUNT=50000
+    volumes:
+      - ${HOME}/volumes/etcd:/etcd
+    command: etcd -advertise-client-urls=http://etcd:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
 
-  # Backend服务
-  # backend:
-  #   build:
-  #     context: ./backend
-  #     dockerfile: Dockerfile
-  #   container_name: ai-assistant-backend
-  #   environment:
-  #     - DATABASE_URL=postgresql://ai_user:ai_password@postgres:5432/ai_assistant
-  #     - MILVUS_HOST=milvus
-  #     - MILVUS_PORT=19530
-  #   ports:
-  #     - "8010:8010"
-  #   volumes:
-  #     - ./backend:/app
-  #   networks:
-  #     - ai-network
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     milvus:
-  #       condition: service_healthy
-  #   healthcheck:
-  #     test: [ "CMD", "curl", "-f", "http://localhost:8010/docs" ]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 3
+  minio:
+    container_name: milvus-minio
+    image: minio/minio:RELEASE.2024-12-18T13-15-44Z
+    environment:
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+    ports:
+      - "9001:9001"
+      - "9000:9000"
+    volumes:
+      - ${HOME}/volumes/minio:/minio_data
+    command: minio server /minio_data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
 
-  # # Frontend服务
-  # frontend:
-  #   build:
-  #     context: ./frontend
-  #     dockerfile: Dockerfile
-  #   container_name: ai-assistant-frontend
-  #   environment:
-  #     - NEXT_PUBLIC_API_URL=http://localhost:8010
-  #   ports:
-  #     - "3000:3000"
-  #   volumes:
-  #     - ./frontend:/app
-  #     - /app/node_modules
-  #   networks:
-  #     - ai-network
-  #   depends_on:
-  #     - backend
-  #   healthcheck:
-  #     test: [ "CMD", "curl", "-f", "http://localhost:3000" ]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 3
+  standalone:
+    container_name: milvus-standalone
+    image: milvusdb/milvus:v2.6.4
+    command: ["milvus", "run", "standalone"]
+    security_opt:
+    - seccomp:unconfined
+    environment:
+      ETCD_ENDPOINTS: etcd:2379
+      MINIO_ADDRESS: minio:9000
+      MQ_TYPE: woodpecker
+    volumes:
+      - ${HOME}/volumes/milvus:/var/lib/milvus
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
+      interval: 30s
+      start_period: 90s
+      timeout: 20s
+      retries: 3
+    ports:
+      - "19530:19530"
+      - "9091:9091"
+    depends_on:
+      - "etcd"
+      - "minio"
 
-  # 网络配置
 networks:
-  ai-network:
-    driver: bridge
-
-# 数据卷配置
-volumes:
-  postgres_data:
-  milvus_data:
-  etcd_data:
-  minio_data:
+  default:
+    name: milvus
