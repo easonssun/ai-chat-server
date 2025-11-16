@@ -7,6 +7,7 @@ import asyncio
 from typing import AsyncGenerator
 from langchain_core.callbacks import BaseCallbackHandler
 from llm.model import chain_with_history
+from rag.rag_system import RAG
 import uuid
 
 app = FastAPI(title="AI Chat Box API", description="基于DeepSeek的聊天API")
@@ -58,8 +59,10 @@ async def generate_response(
         # 在后台任务中运行模型
         async def run_model():
             try:
+                context = RAG.search(input_text, k=3)
+                print('context:', context)
                 await chain_with_history.ainvoke(
-                    {"question": input_text},
+                    {"question": input_text, "context": context},
                     config={
                         "callbacks": [callback],
                         "configurable": {"session_id": session_id},

@@ -41,7 +41,18 @@ prompt = ChatPromptTemplate.from_messages(
     [
         ("system", system_prompt),
         MessagesPlaceholder(variable_name="history"),
-        ("human", "{question}"),
+        (
+            "human",
+            """
+                使用以下用<context>标签包围的信息来回答用<question>标签包围的问题。
+                <context>
+                {context}
+                </context>
+                <question>
+                {question}
+                </question>
+            """,
+        ),
     ]
 )
 
